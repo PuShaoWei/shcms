@@ -1,8 +1,9 @@
+# [项目关闭，不再维护]
 # shcms
 
 ![image](http://cdn.endaosi.com/image/shcms-logo.png)
 
-一个基于laravel5.3最佳实践的cms程序，使用众多现代web开发特性。
+一个基于laravel5.4最佳实践的cms程序，使用众多现代web开发特性。
 
 ## 在线DEMO
 
@@ -47,12 +48,8 @@ cp .env.example .env
 
 3. 修改`APP_URL`，改为可访问到的url，否则邮件中和cli中无法获取正确的url。
 
-创建数据库
+4. 创建数据库`shcms`
 
-```sql
-CREATE DATABASE homestead CHARSET utf8;
-
-```
 
 生成app_key和填充数据库
 ```bash
@@ -92,9 +89,28 @@ supervisor 推荐配置
 
 ```bash
 [program:ws]
+directory=path/to/shcms/
 command=php artisan ws
 user=www-data
+
+[program:queue-default]
 directory=path/to/shcms/
+process_name=%(program_name)s_%(process_num)02d
+command=php artisan queue:work --queue=default --sleep=3 --tries=1
+autostart=true
+autorestart=true
+user=www-data
+numprocs=1
+
+[program:queue-high]
+directory=path/to/shcms/
+process_name=%(program_name)s_%(process_num)02d
+command=php artisan queue:work --queue=high --sleep=3 --tries=1
+autostart=true
+autorestart=true
+user=www-data
+numprocs=4
+
 ```
 
 然后使新的配置生效

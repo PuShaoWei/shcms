@@ -16,17 +16,14 @@ use Illuminate\Http\Request;
 /** @var Route $router */
 
 
-//Route::get('/user', function (Request $request) {
+//Route::middleware('auth:api')->get('/user', function (Request $request) {
 //    return $request->user();
-//})->middleware('auth:api');
+//});
+
 
 Route::resource('/article','Api\ArticleController');
-
+Route::resource('/region', 'Api\RegionController');
 
 Route::get('/system-info','Api\IndexController@systemInfo');
 
-Route::group([
-    'prefix' => 'auth',
-], function ($router) {
-    Route::post('/login','Api\AuthController@postLogin');
-});
+Route::post('/auth/login','Api\AuthController@postLogin');

@@ -1,31 +1,23 @@
 <?php
 
-use App\User;
 use Illuminate\Database\Seeder;
 
 class UserSeeder extends Seeder
 {
     /**
-     * Run the database seeds.
+     * 添加默认的管理员账号
      *
      * @return void
      */
     public function run()
     {
-        $users_data = [
-            ['name' => 'shellus', 'email' => 'shellus@endaosi.com','password' => 'a7245810'],
-        ];
-
-        foreach($users_data as $user_data){
-            $user = \App\Service\UserService::create($user_data);
-            $this -> command -> info('insert user: ' . $user['email']);
-        }
-
-
-        /** @var User $user */
-        $user = User::whereEmail('shellus@endaosi.com') -> firstOrFail();
-
-
-        $user->attachRole(\App\Role::whereName('Admin') -> firstOrFail());
+        $user = \App\Models\User::create([
+            'name'        => 'admin',
+            'email'       => 'admin@admin.com',
+            'password'    => bcrypt('admin'),
+            'register_ip' => '',
+        ]);
+        $adminRole = \App\Models\Role::where('name','=','Admin')->first();
+        $user->attachRole($adminRole);
     }
 }

@@ -2,10 +2,8 @@
 
 namespace App\Listeners;
 
-use App\LoginHistory;
+use App\Models\LoginHistory;
 use Illuminate\Auth\Events\Login;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Contracts\Queue\ShouldQueue;
 
 class LogSuccessfulLogin
 {

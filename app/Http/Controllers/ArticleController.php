@@ -2,161 +2,113 @@
 
 namespace App\Http\Controllers;
 
-use App\Article;
-use App\ArticleVote;
-use App\Category;
-use App\SearchHistory;
-use App\Tag;
+use App\Models\Category;
+use App\Models\Meta;
+use App\Repositories\Content\ArticleRepository;
+use App\Models\Tag;
 use Illuminate\Http\Request;
-
-use App\Http\Requests;
+use App\Repositories\Criteria\RequestCriteria;
 
 class ArticleController extends Controller
 {
-
-    public function search(Request $request){
-
-
-        // 只对登录用户记录搜索历史
-        if (\Auth::check()){
-            SearchHistory::firstOrCreate([
-                'word' => $request['s'],
-                'page' => $request -> get('page', 1),
-                'user_id' => \Auth::user() -> id,
-            ]);
-        }
-
-
-        $articles = Article::search($request['s'],$request['c']);
-
-        return view('article.index', ['articles' => $articles]);
-
-    }
-
-    public function vote(Requests\UserArticleVoteRequest $request)
-    {
-        $data = [
-                'user_id' => $request -> user() -> id,
-
-            ] + $request -> only('article_id');
-
-        if($request['action'] == 'up'){
-            $result = ArticleVote::voteUp($data);
-        }else{
-            $result = ArticleVote::voteDown($data);
-        }
-
-        $article = Article::find($request -> get('article_id'));
-        $result['article_up_vote'] = $article -> votes() -> where('vote', '>', 0) -> sum('vote');
-        $result['article_down_vote'] = $article -> votes() -> where('vote', '<', 0) -> sum('vote');
-
-
-
-        return $this -> message($result?'success':'fail',$result?'操作成功':'操作失败', $result);
-    }
-
+    /** @var ArticleRepository $repository */
+    protected $repository;
 
     /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
+     * ArticleController constructor.
+     * @param ArticleRepository $repository
      */
-    public function index()
+    public function __construct(ArticleRepository $repository)
     {
-        //
-    }
-
-    public function tagIndex($id){
-        $articles = Tag::where(is_numeric($id)?'id':'slug',$id)->firstOrFail()->articles()->orderBy('articles.updated_at', 'DESC')->paginate(20);
-
-        $articles->load(['comments' => function ($query) {
-//            $query->selectRaw('min(id) as id, article_id, count(*) as comments_count');
-//            $query->groupBy('article_id');
-            $query->orderBy('created_at','DESC');
-        }]);
-        return view('article.index', ['articles' => $articles]);
-    }
-    public function categoryIndex($id){
-        $articles = Category::where(is_numeric($id)?'id':'slug',$id)->firstOrFail()->articles()->orderBy('articles.updated_at', 'DESC')->paginate(20);
-
-        $articles->load(['comments' => function ($query) {
-//            $query->selectRaw('min(id) as id, article_id, count(*) as comments_count');
-//            $query->groupBy('article_id');
-            $query->orderBy('created_at','DESC');
-        }]);
-        return view('article.index', ['articles' => $articles]);
+        $this->repository = $repository->pushCriteria(app(RequestCriteria::class));
     }
 
     /**
-     * Show the form for creating a new resource.
+     * 文章列表，兼容分类、标签、关键词搜索
      *
+     * @param Request $request
+     * @param ArticleRepository $this->repository
+     * @param null $metaId
      * @return \Illuminate\Http\Response
+     * @internal param null $id
      */
+    public function index(Request $request, $metaId = null)
+    {
+        $meta = new \stdClass();
+        $meta->title = '';
+
+        if (\Route::currentRouteName() == 'article.index') {
+
+        }
+        if (\Route::currentRouteName() == 'category.show') {
+            $meta = Category::where(is_numeric($metaId) ? 'id' : 'slug', $metaId)->firstOrFail();
+            $this->repository->pushCriteria(new \App\Repositories\Criteria\CategoryCriteria($meta));
+        }
+        if (\Route::currentRouteName() == 'tag.show') {
+            $meta = Tag::where(is_numeric($metaId) ? 'id' : 'slug', $metaId)->firstOrFail();
+            $this->repository->pushCriteria(new \App\Repositories\Criteria\TagCriteria($meta));
+        }
+
+
+
+        $titleMap = [
+            'article.index' => '全部文章',
+            'category.show' => '分类 - ' . $meta->title,
+            'tag.show' => '标签 - ' . $meta->title,
+        ];
+
+        $pn = $request->get('pn', 20);
+
+        $articles = $this->repository->orderBy('updated_at', 'DESC')->with('comments.user')->with('user')->paginate($pn)->appends($request->query());
+
+        return view('article.index', ['articles' => $articles, 'article_title' => $titleMap[\Route::currentRouteName()]]);
+    }
+
+
+    public function show($id)
+    {
+        $article = $this->repository->with('comments.user')->find($id);
+        return view('article.show', ['article' => $article]);
+    }
+
     public function create()
     {
-        //
+        $model = $this->repository->model();
+        return view('article.edit', [
+            'article' => new $model,
+            'action' => 'create',
+            'method' => 'POST',
+            'route' => 'article.store',
+            'title' => '发布文章',
+        ]);
     }
 
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
-    public function store(Request $request)
-    {
-        //
-    }
-
-    /**
-     * Display the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function show(Article $article)
-    {
-        $article->load(['comments.user' => function ($query) {
-//            $query->selectRaw('min(id) as id, article_id, count(*) as comments_count');
-//            $query->groupBy('article_id');
-//            $query->orderBy('created_at','DESC');
-        }]);
-        return view('article.show',['article' => $article]);
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
     public function edit($id)
     {
-        return view('article.edit',['article' => Article::find($id)]);
+        return view('article.edit', [
+            'article' => $this->repository->find($id),
+            'action' => 'edit',
+            'method' => 'PUT',
+            'route' => 'article.update',
+            'title' => '编辑文章',
+        ]);
     }
 
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
+    public function store(Request $request)
+    {
+        $article = $this->repository->create($request->all() + ['user_id' => \Auth::id()]);
+        return $this->success('发布成功', ['article' => $article]);
+    }
+
     public function update(Request $request, $id)
     {
-        Article::find($id) -> update($request->all());
-        return $this -> success('保存成功');
+        $this->repository->find($id)->update($request->all());
+        return $this->success('保存成功');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy(Article $article)
+    public function destroy($id)
     {
-        $article->delete();
-        return $this -> success('删除成功');
+        $this->repository->delete($id);
+        return $this->success('删除成功');
     }
 }

@@ -11,50 +11,57 @@
 |
 */
 
+use App\Http\Controllers\ArticleController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\Auth\ResetPasswordController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CommentController;
+use App\Http\Controllers\FavoriteController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\IndexController;
+use App\Http\Controllers\TestController;
+use App\Http\Controllers\UserController;
+
 Route::group([
     'middleware' => 'auth',
 ], function ($router) {
-    Route::post('/article/vote', 'ArticleController@vote');
-    Route::resource('article.comment', 'CommentController');
+    Route::resource('article.comment', CommentController::class);
 
-    Route::post('/category/update-logo', 'CategoryController@updateLogo');
+    Route::post('/category/update-logo', CategoryController::class . '@updateLogo');
 
-    Route::post('/user/update-avatar', 'UserController@updateAvatar');
-    Route::get('/home', 'HomeController@index') -> name('home');
+    Route::post('/user/update-avatar', UserController::class . '@updateAvatar');
+    Route::get('/home', HomeController::class . '@index')->name('home');
 
-    Route::get('/favorite/show-add-article-to-favorite', 'FavoriteController@showAddArticleToFavorite') -> name('show-add-article-to-favorite');
-    Route::post('/favorite/add-article-to-favorite', 'FavoriteController@addArticleToFavorite') -> name('add-article-to-favorite');
-    Route::resource('/favorite', 'FavoriteController');
 });
 
-Route::get('/', 'IndexController@index') -> name('index');
-Route::get('/test', 'TestController@index');
-
+Route::get('/', IndexController::class . '@index')->name('index');
+Route::get('/test', TestController::class . '@index');
 
 /********************* Auth Routes *********************/
 // Authentication Routes...
-$this->get('login', 'Auth\LoginController@showLoginForm')->name('login');
-$this->post('login', 'Auth\LoginController@login');
-$this->post('logout', 'Auth\LoginController@logout')->name('logout');
+$this->get('login', LoginController::class . '@showLoginForm')->name('login');
+$this->post('login', LoginController::class . '@login');
+$this->post('logout', LoginController::class . '@logout')->name('logout');
 
 // Registration Routes...
-$this->get('register', 'Auth\RegisterController@showRegistrationForm')->name('register');
-$this->post('register', 'Auth\RegisterController@register');
+$this->get('register', RegisterController::class . '@showRegistrationForm')->name('register');
+$this->post('register', RegisterController::class . '@register');
 
 // Password Reset Routes...
-$this->get('password/reset', 'Auth\ForgotPasswordController@showLinkRequestForm');
-$this->post('password/email', 'Auth\ForgotPasswordController@sendResetLinkEmail');
-$this->get('password/reset/{token}', 'Auth\ResetPasswordController@showResetForm');
-$this->post('password/reset', 'Auth\ResetPasswordController@reset');
+$this->get('password/reset', ForgotPasswordController::class . '@showLinkRequestForm')->name('password.request');
+$this->post('password/email', ForgotPasswordController::class . '@sendResetLinkEmail')->name('password.email');
+$this->get('password/reset/{token}', ResetPasswordController::class . '@showResetForm')->name('password.reset');
+$this->post('password/reset', ResetPasswordController::class . '@reset');
+
 /********************* End *********************/
 
-Route::get('/article/search', 'ArticleController@search');
-Route::get('/article/reading', 'ArticleController@reading');
-Route::resource('/article', 'ArticleController');
+/** 这是首页 */
 
-Route::get('/category/{id}', 'ArticleController@categoryIndex');
-Route::resource('/category', 'CategoryController');
+Route::resource('/article', ArticleController::class);
 
-Route::get('/tag/{id}', 'ArticleController@tagIndex');
-Route::resource('/tag', 'TagController');
+Route::get('/category/{id}', ArticleController::class . '@index')->name('category.show');
+Route::get('/tag/{id}', ArticleController::class . '@index')->name('tag.show');
 
+Route::resource('/item', \App\Http\Controllers\ItemController::class);

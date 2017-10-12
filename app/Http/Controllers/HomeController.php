@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
-
 class HomeController extends Controller
 {
     /**
@@ -23,12 +21,6 @@ class HomeController extends Controller
      */
     public function index()
     {
-        $read_count = \App\ReadingHistory::whereUserId(\Auth::user()->id) -> count();
-
-        $read_time = \App\ReadingHistory::whereUserId(\Auth::user()->id) -> sum('reading_at');
-
-        $lest_read_articles = \App\ReadingHistory::whereUserId(\Auth::user()->id) -> orderBy('updated_at','desc') -> paginate(20);
-
         return view('home', compact(['read_count', 'read_time', 'lest_read_articles']));
     }
 }

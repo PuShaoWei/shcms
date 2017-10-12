@@ -2,12 +2,9 @@
 
 namespace App\Http\Controllers;
 
-use App\Category;
-use App\File;
-use Illuminate\Database\Eloquent\Builder;
+use App\Models\Meta;
+use App\Models\File;
 use Illuminate\Http\Request;
-
-use App\Http\Requests;
 
 class CategoryController extends Controller
 {
@@ -18,7 +15,7 @@ class CategoryController extends Controller
      */
     public function index()
     {
-        $categories = Category::all();
+        $categories = Meta::withCount('articles')->orderBy('articles_count','DESC')->paginate(\Request::get('pn', 30));
 
         return view('category.index', compact('categories'));
     }
@@ -28,7 +25,7 @@ class CategoryController extends Controller
         if (\Auth::user()->cant('manage_contents')) {
             abort(403);
         }
-        $category = Category::findOrFail($request['category_id']);
+        $category = Meta::findOrFail($request['meta_id']);
         $file = $request->file('logo');
         if (!$file->isValid()) {
             return $this->fail('上传失败' . $file->getErrorMessage());
